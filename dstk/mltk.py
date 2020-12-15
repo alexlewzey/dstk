@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import seaborn as sns
 import umap
 from lightgbm import LGBMRegressor, LGBMClassifier
 from plotly.offline import plot
@@ -28,15 +27,16 @@ from sklearn.neighbors import NearestNeighbors, KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from tqdm import tqdm
-from xgboost import XGBRegressor, XGBClassifier
+
+# from xgboost import XGBRegressor, XGBClassifier
 
 logger = logging.getLogger(__name__)
 
 TreeModel = Union[
     RandomForestClassifier,
     RandomForestRegressor,
-    XGBRegressor,
-    XGBClassifier,
+    # XGBRegressor,
+    # XGBClassifier,
     LGBMRegressor,
     LGBMClassifier,
 ]
@@ -292,7 +292,6 @@ def pca_heatmap(pca: PCA, width=14, height=5.5):
     df = pd.DataFrame(pca.components_, columns=[f'dim{i}' for i in range(pca.components_.shape[1])])
     df = df.round(2)
     fig, ax = plt.subplots(1, 1, figsize=(width, height))
-    sns.heatmap(df, ax=ax, annot=True)
     return fig, ax
 
 

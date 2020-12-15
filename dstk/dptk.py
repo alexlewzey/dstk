@@ -20,14 +20,14 @@ import holidays
 import pyperclip
 import scipy
 import xlwings as xw
-from faker import Faker
+
 from fuzzywuzzy import process, fuzz
 from google.cloud import bigquery
 from openpyxl import load_workbook
 from pyxlsb import open_workbook
 from tqdm import tqdm
 
-from dstk import slibtk
+from slibtk import slibtk
 from dstk.core import *
 
 logger = logging.getLogger(__name__)
@@ -38,25 +38,6 @@ def pycharm_df_autocomplete(df: pd.DataFrame, var_nm: str) -> None:
         \"\"\"serves no purpose other than making column names autocomplete in pycharm\"\"\"\n\t"""
     rows = '\n\t'.join([f"{var_nm}['{col}'] = {var_nm}['{col}']" for col in df.columns.tolist()])
     pyperclip.copy(func + rows)
-
-
-class FakerGB(Faker):
-    def __init__(self, locale='en_GB'):
-        super().__init__(locale)
-
-    def mk_first_name(self): return self.first_name()
-
-    def mk_last_name(self): return self.last_name()
-
-    def mk_name(self): return self.name()
-
-    def mk_address(self): return self.address()
-
-    def mk_email(self): return self.email()
-
-    def mk_url(self): return self.url()
-
-    def mk_image_url(self): return self.image_url()
 
 
 def haversine_distance(long1: np.ndarray, lat1: np.ndarray, long2: np.ndarray, lat2: np.ndarray):
@@ -88,12 +69,6 @@ def make_distance_matrix(long1: np.ndarray, lat1: np.ndarray, long2: np.ndarray,
     if (lbl1 is not None) and (lbl2 is not None):
         matrix = pd.DataFrame(matrix, index=lbl1, columns=lbl2)
     return matrix
-
-
-def lonlat2bng(df, long='longitude', lat: str = 'latitude') -> pd.DataFrame:
-    """covert longlat columns to eastern northern and return them as part of the DataFrame"""
-    df['eastern'], df['northern'] = convert_bng(df[long].tolist(), df[lat].tolist())
-    return df
 
 
 def euclidean_distance_matrix(df1: pd.DataFrame, df2: pd.DataFrame, labels: str, eastern: str = 'eastern',
@@ -863,4 +838,4 @@ pd.DataFrame.tidy = tidy
 pd.DataFrame.flatten_cols = flatten_cols
 pd.DataFrame.set_dtypes = set_dtypes
 pd.DataFrame.object2numeric = object2numeric
-# .DataFrame.pd_to_gbq = pd_to_gbq
+# pd.DataFrame.pd_to_gbq = pd_to_gbq

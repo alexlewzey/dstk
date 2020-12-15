@@ -93,27 +93,18 @@ px.line(facet_col=col, facet_col_wrap=5)
 
 """
 import itertools
-import math
 import random
-from functools import partial
-from pathlib import Path
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import plotly.graph_objects as go
-import seaborn as sns
 from itertools import cycle
 
+import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
+import seaborn as sns
 from pandas._libs.tslibs.timestamps import Timestamp
 from plotly.offline import plot
-import plotly.express as px
-from typing import List, Callable, Dict, Optional, Union
-from typing import Tuple, List, Dict, Iterator
-
+from slibtk import slibtk
 from tqdm import tqdm
 
-from dstk import slibtk
 from dstk.core import *
 
 

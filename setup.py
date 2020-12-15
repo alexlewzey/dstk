@@ -18,22 +18,22 @@ setup(
         ],
     },
     install_requires=[
+        'slibtk @ git+https://github.com/alexlewzey/slibtk.git#egg=slibtk',
         'pandas',
         'scikit-learn',
+        'tqdm',
         'matplotlib',
         'plotly',
-        'tqdm',
-
+        'seaborn',
         'umap-learn',
         'lightgbm',
-
         'google-cloud-bigquery',
-
         'xlwings',
         'fuzzywuzzy',
         'python-Levenshtein',
         'pyxlsb',
         'holidays',
+        'openpyxl',
         'pyperclip',
     ],
     license="BSD license",
