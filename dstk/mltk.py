@@ -27,6 +27,7 @@ from sklearn.neighbors import NearestNeighbors, KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from tqdm import tqdm
+from dstk import dviztk
 
 # from xgboost import XGBRegressor, XGBClassifier
 
@@ -238,16 +239,18 @@ def nearest_neighbours(feat: pd.DataFrame, features: List[str], in_trial_col: st
     return neighbours
 
 
-def kmeans_elbow(data, n=15, path: Optional[Path] = None) -> None:
+def kmeans_elbow(data, n=15, path: Optional[Path] = None, title: Optional[str] = None) -> pd.DataFrame:
     """perform elbow method using kmeans visualising the loss with plotly"""
     losses = {}
     for i in tqdm(range(1, n), total=n):
         km = KMeans(i).fit(data)
         losses[i] = km.inertia_
-    losses = pd.Series(losses).to_frame(name='loss')
-    fig = px.line(losses, x=losses.index, y='loss')
-    filename = path.as_posix() if path else 'temp-plot.html'
-    plot(fig, filename=filename)
+    losses = pd.Series(losses).to_frame(name='loss').reset_index()
+    losses['diff'] = losses['loss'] - losses['loss'].shift(1)
+    losses['grad'] = losses['diff'] / losses['loss']
+    dviztk.line_seconday_axis(losses, x='index', y_primary='loss', y_secondary='grad', path=path, title=title)
+    return losses
+
 
 
 # dimensionality reduction #############################################################################################

@@ -215,8 +215,7 @@ def set_object_dtype(ser: pd.Series) -> pd.Series:
 
 def set_object_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """see: set_object_dtype()"""
-    df = df.infer_objects()
-    for col in df.select_dtypes(object).columns:
+    for col in tqdm(df.select_dtypes(object).columns):
         df[col] = set_object_dtype(df[col])
     return df
 
@@ -372,29 +371,25 @@ def encode_and_return_mapping(ser: pd.Series) -> Tuple[pd.Series, Dict[int, str]
     return ser_codes, mapping
 
 
-def fuzzy_match_index(iterable: Iterable, lookup: Iterable, iterable_name: str = 'iterable',
-                      lookup_name: str = 'lookup'):
-    """Return a DataFrame of two fuzzy matched lists with fuzz score where the iterable contains the individual items
-    that are searched for in the lookup list"""
-    matched_data = []
-    for item in tqdm(iterable):  # data b is the short list
-
-        new_cln = [item]
-        new_cln.extend(process.extractOne(item, lookup, scorer=fuzz.ratio))
-        newtuple = tuple(new_cln)
-
-        matched_data.append(newtuple)
-
-    df_matched_data = pd.DataFrame(matched_data)
-    df_matched_data.columns = [iterable_name, lookup_name, 'fuzz ratio']
-
-    return df_matched_data
-
-
 def float2int2string(ser):
     """convert columns of objects to string while ensuring the string representation of numbers is an integer ie not
     a float"""
     ser.astype(str).str.replace('\.0+', '')
+
+
+def fuzzy_match(items: List[str], possible_matches: List[str], col_items: str = 'items') -> pd.DataFrame:
+    """Return a DataFrame of two fuzzy matched lists with fuzz score where the iterable contains the individual items
+    that are searched for in the lookup list"""
+    matches = [(i,) + process.extractOne(i, possible_matches, scorer=fuzz.ratio) for i in tqdm(items)]
+    return pd.DataFrame(matches, columns=[col_items, 'matches', 'fuzz_ratio'])
+
+
+def pd_fuzzy_match(df, col, df_poss, col_poss) -> pd.DataFrame:
+    """pandas extension of fuzzy_match()"""
+    items = df[col].dropna().unique().tolist()
+    possible_matches = df_poss[col_poss].dropna().unique().tolist()
+    matches = fuzzy_match(items, possible_matches, col_items=col)
+    return df.merge(matches, on=col)
 
 
 # memory optimisation ##################################################################################################
@@ -471,6 +466,7 @@ def value_counts_pct(ser: pd.Series, dropna=False, fmt=True) -> pd.DataFrame:
 
 def cum_pcts(ser: pd.Series, fmt=True) -> pd.DataFrame:
     """adds a pct breakdown and cumulative pct breakdown to a series"""
+    ser = ser.sort_values(ascending=False)
     df = pd.concat(
         [ser,
          ser / ser.sum(),
@@ -487,7 +483,7 @@ def cum_pcts(ser: pd.Series, fmt=True) -> pd.DataFrame:
                 df[cols[1:]].applymap('{:.0%}'.format),
             ], axis=1)
 
-    df.iloc[-1, -1] = ''
+    df.iloc[-1, -1] = np.NaN
 
     return df
 
@@ -593,6 +589,32 @@ def make_index(df: pd.DataFrame, grp_var: str, cat_var: str, cont_var: str) -> p
     df = df.merge(totals, on=cat_var, how='left')
     df['index'] = df['pct'] / df['pct_all']
     df['variable'] = cat_var
+    return df
+
+
+def make_group_rank(df: pd.DataFrame, col_cat: Union[str, List], col_cont: str, rank_col: str = 'rank') -> Tuple[
+    pd.DataFrame, pd.DataFrame]:
+    """add a rank columns to a DataFrame which is based on the sum of a groupby"""
+    rank = (df.groupby(col_cat)[col_cont].sum()
+            .sort_values(ascending=False)
+            .reset_index()
+            .reset_index()
+            .rename({'index': rank_col}, axis=1)
+            .drop(col_cont, 1))
+    df = df.merge(rank, on=col_cat, how='left').sort_values(rank_col)
+    return df, rank
+
+
+def bin_categories_lt_thresh(df: pd.DataFrame, thresh: float, grp_var: str, cat_var: str, cont_var: str,
+                             non_cat_vars: List[str]) -> pd.DataFrame:
+    """bin categories below a certian pct contribution of spend"""
+    group_on = [grp_var, cat_var]
+    spend_by_range_brand = df.groupby(group_on)[cont_var].sum().reset_index()
+    spend_by_range_brand = make_index(spend_by_range_brand, grp_var, cat_var, cont_var)[group_on + ['pct']]
+    df = df.merge(spend_by_range_brand, on=group_on)
+    brands_other = df.query(f'pct < {thresh}').groupby([grp_var] + non_cat_vars).sum().reset_index()
+    brands_other[cat_var] = 'other'
+    df = pd.concat([df.query(f'pct >= {thresh}'), brands_other])
     return df
 
 

@@ -89,6 +89,7 @@ facet col wrap
 px.line(facet_col=col, facet_col_wrap=5)
 
 
+category_orders
 
 
 """
@@ -102,6 +103,7 @@ import plotly.graph_objects as go
 import seaborn as sns
 from pandas._libs.tslibs.timestamps import Timestamp
 from plotly.offline import plot
+from plotly.subplots import make_subplots
 from slibtk import slibtk
 from tqdm import tqdm
 
@@ -151,10 +153,19 @@ def plot_histograms(df: pd.DataFrame, columns: Optional[List[str]] = None) -> No
 
 # plotly ###############################################################################################################
 
-def px_seq_as_line(seq, y: str = 'value'):
-    """plot python sequence as a plotly line figure"""
-    fig = px.line(pd.DataFrame(seq, columns=[y]), y=y)
-    plot(fig)
+
+def line_seconday_axis(df: pd.DataFrame, x: str, y_primary: str, y_secondary: str, title: Optional[str] = None,
+                       path: Optional[Path] = None) -> None:
+    """plot a plotly lines graph with a seconday axis"""
+    fig1 = px.line(df, x, y_primary, color_discrete_sequence=['blue'])
+    fig2 = px.line(df, x, y_secondary, color_discrete_sequence=['magenta'])
+    fig = make_subplots(specs=[[{'secondary_y': True}]])
+    fig.update_layout(title=title)
+    fig.add_trace(fig1.data[0], secondary_y=False)
+    fig.add_trace(fig2.data[0], secondary_y=True)
+    fig.update_yaxes(title_text=y_primary, color='blue', secondary_y=False)
+    fig.update_yaxes(title_text=y_secondary, color='magenta', secondary_y=True)
+    fig.plot(path)
 
 
 def px_scatter3d_by_colors(df: pd.DataFrame, colors: List, path: Path, fname: str, hover_name: str, hover_data,
@@ -279,6 +290,21 @@ def make_sankey_fig(index: List, source: List, target: List, values: List, color
         ))])
     fig.update_layout(title_text=title, font_size=10)
     return fig
+
+
+def px_scatter_geo(df: pd.DataFrame, color, hover_name, title, path: Optional[Path] = None, lat='latitude',
+                   lon='longitude', **kwargs) -> None:
+    """convenience wrapper for px.scatter_geo for plotting uk scatter maps"""
+    fig = px.scatter_geo(df, lat=lat, lon=lon, hover_name=hover_name, color=color, title=title, **kwargs)
+    fig.update_layout(
+        geo=dict(
+            scope='europe',
+            showland=True,
+            lonaxis=dict(range=[df[lon].min(), df[lon].max()]),
+            lataxis=dict(range=[df[lat].min(), df[lat].max()]),
+        ),
+    )
+    fig.plot(path)
 
 
 # seaborn ##############################################################################################################
