@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import textwrap
+import time
 from concurrent.futures.process import ProcessPoolExecutor
 from datetime import timedelta
 
@@ -393,6 +394,45 @@ def pd_fuzzy_match(df, col, df_poss, col_poss) -> pd.DataFrame:
 
 
 # memory optimisation ##################################################################################################
+
+def make_df(nrow: int, ncol: int) -> pd.DataFrame:
+    """make toy DataFrame"""
+    df = pd.DataFrame(np.random.randint(100_000, 1_000_000, size=(nrow, ncol)),
+                      columns=[f'col{i}' for i in range(ncol)]).astype(float)
+    return df
+
+
+def format_performance_test(df: pd.DataFrame, fname: str = 'temp_df', csv: bool = True) -> pd.DataFrame:
+    """test the read, write and memory performance of a DataFrame accross different storage formats"""
+    results = {}
+    formats = [
+        ('parquet', pd.DataFrame.to_parquet, pd.read_parquet),
+        ('pickle', pd.DataFrame.to_pickle, pd.read_pickle),
+        ('feather', pd.DataFrame.to_feather, pd.read_feather),
+    ]
+    if csv:
+        formats.append(
+            ('csv', pd.DataFrame.to_csv, pd.read_csv)
+        )
+
+    for fmt, to, _ in formats:
+        logger.info(f'to: {fmt}')
+        start = time.time()
+        to(df, Path('.') / f'{fname}.{fmt}')
+        results[fmt] = {'to': time.time() - start}
+
+    for fmt, _, read in formats:
+        logger.info(f'read: {fmt}')
+        start = time.time()
+        path = Path('.') / f'{fname}.{fmt}'
+        read(path)
+        results[fmt]['read'] = time.time() - start
+        results[fmt]['memory'] = path.stat().st_size
+        path.unlink()
+
+    res = pd.DataFrame(results)
+    res.loc['hr_memory'] = res.loc['memory'].apply(slibtk.hr_bytes)
+    return res
 
 
 def make_df_memory_efficient(df: pd.DataFrame, downcast: bool = False, show_usage: bool = True,
