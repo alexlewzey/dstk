@@ -1,4 +1,22 @@
-"""monitoring tool-kit"""
+"""
+monitoring tool-kit
+
+example
+-------
+
+import os
+
+try:
+    def app():
+        something
+
+    app()
+except Exception as e:
+    error_log = montk.make_error_log()
+    montk.send_error_log_email(to=os.environ['EMAIL_ADDRESS'])
+
+
+"""
 import smtplib
 import os
 from email.message import EmailMessage

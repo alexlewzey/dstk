@@ -393,6 +393,19 @@ def pd_fuzzy_match(df, col, df_poss, col_poss) -> pd.DataFrame:
     return df.merge(matches, on=col)
 
 
+def outliers_zscore(ser: pd.Series, thresh: float = 3.) -> pd.Series:
+    """return series of bools where true is outlier based on the zscore method"""
+    return np.abs(scipy.stats.zscore(ser)) > thresh
+
+
+def outliers_iqr(ser: pd.Series, thresh: float = 1.5) -> pd.Series:
+    """return series of bools where true is outlier based on the iqr method"""
+    q1 = ser.quantile(0.25)
+    q3 = ser.quantile(0.75)
+    iqr = q3 - q1
+    return (ser < (q1 - (thresh * iqr))) | ((q3 + (thresh * iqr)) < ser)
+
+
 # memory optimisation ##################################################################################################
 
 def make_df(nrow: int, ncol: int) -> pd.DataFrame:

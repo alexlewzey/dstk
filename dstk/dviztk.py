@@ -191,6 +191,33 @@ def add_vertline(fig: go.Figure, y1: float, x: int = 1) -> go.Figure:
     return fig
 
 
+def scatter_median_lines(fig: go.Figure, df: pd.DataFrame, x: str, y: str) -> go.Figure:
+    """add vertical line to at x=1 to plotly figure with height of y1"""
+    fig.add_shape(
+        type='line',
+        x0=df[x].min(),
+        y0=df[y].median(),
+        x1=df[x].max(),
+        y1=df[y].median(),
+        line=dict(width=3, dash='dot', color='red'),
+    )
+    fig.add_shape(
+        type='line',
+        x0=df[x].median(),
+        y0=df[y].min(),
+        x1=df[x].median(),
+        y1=df[y].max(),
+        line=dict(width=3, dash='dot', color='red'),
+    )
+    return fig
+
+
+def px_scatter_with_lines(df: pd.DataFrame, x: str, y: str, **kwargs) -> go.Figure:
+    fig = px.scatter(df, x, y, marginal_y='box', marginal_x='box', **kwargs)
+    fig = scatter_median_lines(fig, df, x, y)
+    return fig
+
+
 def add_periodic_vertical_lines(fig: go.Figure, start: Union[str, Timestamp], end: Union[str, Timestamp], freq: str,
                                 y1: float, y0: float = 0) -> go.Figure:
     """
@@ -293,7 +320,7 @@ def make_sankey_fig(index: List, source: List, target: List, values: List, color
 
 
 def px_scatter_geo(df: pd.DataFrame, color, hover_name, title, path: Optional[Path] = None, lat='latitude',
-                   lon='longitude', **kwargs) -> None:
+                   lon='longitude', **kwargs) -> go.Figure:
     """convenience wrapper for px.scatter_geo for plotting uk scatter maps"""
     fig = px.scatter_geo(df, lat=lat, lon=lon, hover_name=hover_name, color=color, title=title, **kwargs)
     fig.update_layout(
@@ -304,7 +331,7 @@ def px_scatter_geo(df: pd.DataFrame, color, hover_name, title, path: Optional[Pa
             lataxis=dict(range=[df[lat].min(), df[lat].max()]),
         ),
     )
-    fig.plot(path)
+    return fig
 
 
 # seaborn ##############################################################################################################
@@ -501,8 +528,8 @@ def plt_hbar(df: pd.DataFrame, path='', pct=False, width=9, height=4, sort_index
 
 # Monkey patching existing classes #####################################################################################
 
-def _plot(fig: go.Figure, filename: OptPathOrStr = None, auto_open: bool = True, yaxis_pct: bool = False, *args,
-          **kwargs) -> None:
+def _plot(fig: go.Figure, filename: OptPathOrStr = None, auto_open: bool = True, yaxis_pct: bool = False,
+          lm: bool = False, *args, **kwargs) -> None:
     """render plotly figure as html in browser, with default save location as hidden dir in home"""
     (Path.home() / '.plotly').mkdir(exist_ok=True, parents=True)
     # if no filename passed save in a hidden home dir with unique filename so plots always point to separate files
