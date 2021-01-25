@@ -34,6 +34,8 @@ def send_email(to: str, subject: str, body: str) -> None:
     msg['To'] = to
     msg['Subject'] = subject
     msg.set_content(body)
+    # msg.add_attachment(df.to_csv(index=False), filename='data.csv')
+    # add a text file attachment
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(address, os.environ['EMAIL_PASSWORD'])
         smtp.send_message(msg)

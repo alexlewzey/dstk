@@ -393,17 +393,28 @@ def pd_fuzzy_match(df, col, df_poss, col_poss) -> pd.DataFrame:
     return df.merge(matches, on=col)
 
 
-def outliers_zscore(ser: pd.Series, thresh: float = 3.) -> pd.Series:
+def outliers_zscore(ser: pd.Series, thresh: Optional[float] = None) -> pd.Series:
     """return series of bools where true is outlier based on the zscore method"""
+    thresh = thresh if thresh else 3.
     return np.abs(scipy.stats.zscore(ser)) > thresh
 
 
-def outliers_iqr(ser: pd.Series, thresh: float = 1.5) -> pd.Series:
+def outliers_iqr(ser: pd.Series, thresh: Optional[float] = None) -> pd.Series:
     """return series of bools where true is outlier based on the iqr method"""
+    thresh = thresh if thresh else 1.5
     q1 = ser.quantile(0.25)
     q3 = ser.quantile(0.75)
     iqr = q3 - q1
     return (ser < (q1 - (thresh * iqr))) | ((q3 + (thresh * iqr)) < ser)
+
+
+def rm_outliers(df: pd.DataFrame, col: str, thresh: Optional[float] = None, method: str = 'iqr') -> pd.DataFrame:
+    """filter out outliers use iqr or zscore"""
+    methods = {'zscore': outliers_zscore, 'iqr': outliers_iqr}
+    cond_outliers = methods[method](df[col])
+    logger.info(f'{cond_outliers.sum()} outliers removed.')
+    df = df[~cond_outliers]
+    return df
 
 
 # memory optimisation ##################################################################################################
@@ -541,6 +552,13 @@ def cum_pcts(ser: pd.Series, fmt=True) -> pd.DataFrame:
     return df
 
 
+def fmt_floats(df: pd.DataFrame, floats: Optional[List] = None, pcts: Optional[List] = None) -> pd.DataFrame:
+    """applying string formatting to float columns in a DataFrame"""
+    for col in floats: df[col] = df[col].apply('{:.1f}'.format)
+    for col in pcts: df[col] = df[col].apply('{:.1%}'.format)
+    return df
+
+
 def flatten_cols(df: pd.DataFrame) -> pd.DataFrame:
     """Transform multi index columns names to single level of concatenated names"""
     df.columns = [f'{l0}_{l1}' for l0, l1 in df.columns]
@@ -625,7 +643,8 @@ def tidy(df: pd.DataFrame, var_nm: str = 'metric', value_nm: str = 'value') -> p
     return indexes2str(df).reset_index().melt(id_vars=df.index.name, var_name=var_nm, value_name=value_nm)
 
 
-def make_index(df: pd.DataFrame, grp_var: str, cat_var: str, cont_var: str) -> pd.DataFrame:
+def make_index(df: pd.DataFrame, grp_var: str, cat_var: str, cont_var: str,
+               prefix: Optional[str] = None) -> pd.DataFrame:
     """
     take tidy DataFrame and make within group pct breakdown column and index for the groups in grp_var
     Args:
@@ -637,11 +656,13 @@ def make_index(df: pd.DataFrame, grp_var: str, cat_var: str, cont_var: str) -> p
     Returns:
         df: tidy DataFrame
     """
-    df['pct'] = df.groupby(grp_var)[cont_var].transform(lambda x: x / float(x.sum()))
-    totals = (df.groupby(cat_var)[cont_var].sum() / df[cont_var].sum()).to_frame('pct_all').reset_index()
+    cols = ['pct', 'pct_all', 'index', 'variable']
+    pct, pct_all, index, variable = [f'{prefix}_{c}' for c in cols] if prefix else cols
+    df[pct] = df.groupby(grp_var)[cont_var].transform(lambda x: x / float(x.sum()))
+    totals = (df.groupby(cat_var)[cont_var].sum() / df[cont_var].sum()).to_frame(pct_all).reset_index()
     df = df.merge(totals, on=cat_var, how='left')
-    df['index'] = df['pct'] / df['pct_all']
-    df['variable'] = cat_var
+    df[index] = df[pct] / df[pct_all]
+    df[variable] = cat_var
     return df
 
 
